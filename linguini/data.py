@@ -1,5 +1,6 @@
-from string import Template
 import logging
+
+from templates import Templates
 
 
 # module wide logger instance
@@ -7,15 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class Recipe(object):
-
-    _recipe_format = \
-"""
-\\begin{recipe}$header
-$ingredients
-\end{recipe}
-"""
-
-    _header_format = '{$title \creator{$creator}}{$num_dishes}{$prep_time}'
 
     def __init__(self):
         self._ingredients = []
@@ -56,12 +48,12 @@ $ingredients
         header = self._render_header()
         ingredients = self._render_ingredients()
 
-        template = Template(Recipe._recipe_format)
+        template = Templates.recipe
         return template.substitute(header=header, ingredients=ingredients)
 
     def _render_header(self):
         logger.debug("Rendering header")
-        template = Template(Recipe._header_format)
+        template = Templates.recipe_header
         return template.substitute(title=self._title,
                                    creator=self._creator,
                                    num_dishes=self._num_dishes,
@@ -76,10 +68,6 @@ $ingredients
 
 
 class Ingredient(object):
-
-    _format = """    \ingredient[$amount]{$unit}{$description}
-        $processing
-"""
 
     @property
     def amount(self): pass
@@ -110,7 +98,7 @@ class Ingredient(object):
         self._processing = processing
 
     def render(self):
-        template = Template(Ingredient._format)
+        template = Templates.ingredient
         return template.substitute(amount=self._amount,
                                    unit=self._unit,
                                    description=self._description,
