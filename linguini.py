@@ -10,6 +10,9 @@ import logging
 
 from recipe import Recipe, Ingredient
 
+# module wide logger instance
+logger = logging.getLogger(__name__)
+
 
 class State(object):
     (TITLE, CREATOR, NUM_DISHES, PREP_TIME, INGREDIENTS,
@@ -83,7 +86,7 @@ class KitchenHand(object):
         return True
 
     def _handle_SIGINT(self, signal, frame):
-        logging.debug("caught SIGINT")
+        logger.debug("caught SIGINT")
         if self._state.current in [State.INGREDIENTS,
                                    State.INGREDIENT,
                                    State.AMOUNT,
@@ -92,13 +95,13 @@ class KitchenHand(object):
             self._state.current = State.DONE
             self._process_input(None)
         else:
-            logging.debug("Quitting while in state '{}'".format(
+            logger.debug("Quitting while in state '{}'".format(
                 self._state.current))
             gtk.main_quit()
 
     def _process_input(self, value):
         if value: value = value.strip()
-        logging.debug("processing input '{}' in state {}".format(
+        logger.debug("processing input '{}' in state {}".format(
             value, self._state.current))
 
         if self._state.current == State.TITLE:

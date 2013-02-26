@@ -2,6 +2,10 @@ from string import Template
 import logging
 
 
+# module wide logger instance
+logger = logging.getLogger(__name__)
+
+
 class Recipe(object):
 
     _recipe_format = \
@@ -48,7 +52,7 @@ $ingredients
         self._ingredients.append(ingredient)
 
     def render(self):
-        logging.debug("Rendering recipe")
+        logger.debug("Rendering recipe")
         header = self._render_header()
         ingredients = self._render_ingredients()
 
@@ -56,7 +60,7 @@ $ingredients
         return template.substitute(header=header, ingredients=ingredients)
 
     def _render_header(self):
-        logging.debug("Rendering header")
+        logger.debug("Rendering header")
         template = Template(Recipe._header_format)
         return template.substitute(title=self._title,
                                    creator=self._creator,
@@ -64,7 +68,7 @@ $ingredients
                                    prep_time=self._prep_time)
 
     def _render_ingredients(self):
-        logging.debug("Rendering ingredients")
+        logger.debug("Rendering ingredients")
         ingredients = ""
         for ingredient in self._ingredients:
             ingredients += ingredient.render()
