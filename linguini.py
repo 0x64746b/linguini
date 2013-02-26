@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+import argparse
 import gtk
 import gobject
 import sys
@@ -46,9 +47,10 @@ class State(object):
 
 class KitchenHand(object):
     SIGNAL_NEW_CLIPBOARD_CONTENT = 'owner-change'
-    OUTPUT_FILE = '/tmp/recipe.tex'
 
-    def __init__(self):
+    def __init__(self, output_file):
+        self._output_file = output_file
+
         self._recipe = Recipe()
         self._state = State()
 
@@ -136,7 +138,7 @@ class KitchenHand(object):
 
     def _write(self):
         recipe = self._recipe.render()
-        output = open(KitchenHand.OUTPUT_FILE, 'w')
+        output = open(self._output_file, 'w')
         output.write(recipe)
         output.close()
 
@@ -145,12 +147,25 @@ class KitchenHand(object):
         sys.exit()
 
 
+def _parse_cli_args():
+    prog_description = """Hi! My name is Linguini. I'm your kitchenhand. I will
+help you set your recipes in LaTeX!"""
+
+    parser = argparse.ArgumentParser(description=prog_description)
+
+    parser.add_argument('output_file',
+                         help="The .tex file to write your recipe to.")
+
+    return parser.parse_args()
+
 
 if __name__ == '__main__':
 
+    cli_args = _parse_cli_args()
+
     #logging.basicConfig(level=logging.DEBUG)
 
-    hand = KitchenHand()
+    hand = KitchenHand(cli_args.output_file)
 
     try:
         gtk.main()
