@@ -46,6 +46,7 @@ class State(object):
 
 class KitchenHand(object):
     SIGNAL_NEW_CLIPBOARD_CONTENT = 'owner-change'
+    OUTPUT_FILE = '/tmp/recipe.tex'
 
     def __init__(self):
         self._recipe = Recipe()
@@ -93,10 +94,6 @@ class KitchenHand(object):
                 self._state.current))
             gtk.main_quit()
 
-    def _write(self):
-        #TODO: Dummy implementation
-        print self._recipe.render()
-
     def _process_input(self, value):
         if value: value = value.strip()
         logging.debug("processing input '{}' in state {}".format(
@@ -136,6 +133,12 @@ class KitchenHand(object):
         else:
             self._write()
             self._exit()
+
+    def _write(self):
+        recipe = self._recipe.render()
+        output = open(KitchenHand.OUTPUT_FILE, 'w')
+        output.write(recipe)
+        output.close()
 
     def _exit(self):
         print "We're done!"
