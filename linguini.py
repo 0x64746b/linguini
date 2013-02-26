@@ -154,16 +154,25 @@ help you set your recipes in LaTeX!"""
     parser = argparse.ArgumentParser(description=prog_description)
 
     parser.add_argument('output_file',
-                         help="The .tex file to write your recipe to.")
+                        help="The .tex file to write your recipe to.")
+    parser.add_argument('-L', '--log-file', metavar='file',
+                        help="The file to log to (default: STDOUT).")
+    parser.add_argument('-l', '--log-level', metavar='lvl', default='warning',
+                        choices=['debug', 'info', 'warning', 'error', 'critical'],
+                        help="The lowest level to log (default: %(default)s)")
 
     return parser.parse_args()
+
+
+def _setup_logging(target, level):
+    log_level = getattr(logging, level.upper(), None)
+    logging.basicConfig(filename=target, level=log_level)
 
 
 if __name__ == '__main__':
 
     cli_args = _parse_cli_args()
-
-    #logging.basicConfig(level=logging.DEBUG)
+    _setup_logging(cli_args.log_file, cli_args.log_level)
 
     hand = KitchenHand(cli_args.output_file)
 
