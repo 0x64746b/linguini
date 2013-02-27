@@ -5,6 +5,7 @@ import signal
 import logging
 
 from data import Recipe, Ingredient
+from templates import Templates
 
 # module wide logger instance
 logger = logging.getLogger(__name__)
@@ -132,13 +133,19 @@ class KitchenHand(object):
             self._state.current = State.INGREDIENTS
             self._process_input(None)
         else:
-            self._write()
+            latex = self._render()
+            self._write(latex)
             self._exit()
 
-    def _write(self):
+    def _render(self):
+        logger.debug("Rendering document")
         recipe = self._recipe.render()
+        return Templates.document.substitute(recipe=recipe)
+
+    def _write(self, latex):
+        logger.debug("Writing to file")
         output = open(self._output_file, 'w')
-        output.write(recipe)
+        output.write(latex)
         output.close()
 
     def _exit(self):
