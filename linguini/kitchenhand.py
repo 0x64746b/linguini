@@ -90,19 +90,27 @@ class StdinCapture(Process):
 
 class StdinHandler(Thread):
 
-    def __init__(self, queue, processor):
+    def __init__(self, update_queue, callback):
         super(StdinHandler, self).__init__()
+        self._process = callback
 
-        self._queue = queue
-        self._process = processor
+        self._input_queue = queues.SimpleQueue()
+        self._stdin_capture = StdinCapture(self._input_queue, update_queue)
+        self._stdin_pid = 0
 
         self.daemon = True
 
     def run(self):
+        self._stdin_capture.start()
+        self._stdin_pid = self._stdin_capture.pid
         while True:
             logger.debug('Waiting for update from STDIN')
-            value = self._queue.get()
+            value = self._input_queue.get()
             self._process(value)
+
+    @property
+    def pid(self):
+        return self._stdin_pid
 
 
 class KitchenHand(object):
@@ -114,10 +122,8 @@ class KitchenHand(object):
         self._recipe = Recipe()
         self._state = State()
 
-        input_queue = queues.SimpleQueue()
         self._update_queue = queues.SimpleQueue()
-        self._stdin_handler = StdinHandler(input_queue, self._process_input)
-        self._stdin_capture = StdinCapture(input_queue, self._update_queue)
+        self._stdin_handler = StdinHandler(self._update_queue, self._process_input)
 
         self._watch_inputs()
         signal.signal(signal.SIGINT, self._handle_SIGINT)
@@ -135,7 +141,6 @@ class KitchenHand(object):
 
     def _watch_stdin(self):
         self._stdin_handler.start()
-        self._stdin_capture.start()
 
     def _handle_clipboard_content(self, clipboard, event):
         selection = clipboard.wait_for_text()
@@ -145,7 +150,7 @@ class KitchenHand(object):
 
     def _signal_update(self, update):
         self._update_queue.put(update)
-        kill(self._stdin_capture.pid, signal.SIGALRM)
+        kill(self._stdin_handler.pid, signal.SIGALRM)
 
     def _handle_SIGINT(self, signal, frame):
         logger.debug("caught SIGINT")
