@@ -3,12 +3,20 @@ import gobject
 import sys
 import signal
 import logging
+from multiprocessing import Process, queues
+from os import fdopen, kill
+import readline
+from threading import Thread
 
 from data import Recipe, Ingredient
 from templates import Templates
 
 # module wide logger instance
 logger = logging.getLogger(__name__)
+
+
+class UpdateInterrupt(Exception):
+    pass
 
 
 class State(object):
@@ -45,6 +53,58 @@ class State(object):
         self.prompt()
 
 
+class StdinCapture(Process):
+
+    def __init__(self, input_queue, update_queue):
+        super(StdinCapture, self).__init__()
+
+        self._input_queue = input_queue
+        self._update_queue = update_queue
+
+        signal.signal(signal.SIGALRM, self._handle_SIGALRM)
+        signal.signal(signal.SIGINT, self._handle_SIGINT)
+
+    def run(self):
+        sys.stdin = fdopen(0)
+        while True:
+            logger.debug('Capturing STDIN')
+            try:
+                value = raw_input()
+                logger.debug('Captured "%s" from STDIN', value)
+                self._input_queue.put(value)
+            except UpdateInterrupt as update:
+                logger.debug('Updating history with "%s"', update)
+                readline.add_history(str(update))
+            except EOFError:
+                logger.debug('Received an EOF, terminating')
+                break
+
+    def _handle_SIGALRM(self, signal, frame):
+        update = self._update_queue.get()
+        raise UpdateInterrupt(update)
+
+    def _handle_SIGINT(self, signal, frame):
+        logger.debug('Quitting STDIN capture')
+        sys.exit(0)
+
+
+class StdinHandler(Thread):
+
+    def __init__(self, queue, processor):
+        super(StdinHandler, self).__init__()
+
+        self._queue = queue
+        self._process = processor
+
+        self.daemon = True
+
+    def run(self):
+        while True:
+            logger.debug('Waiting for update from STDIN')
+            value = self._queue.get()
+            self._process(value)
+
+
 class KitchenHand(object):
     SIGNAL_NEW_CLIPBOARD_CONTENT = 'owner-change'
 
@@ -53,6 +113,11 @@ class KitchenHand(object):
 
         self._recipe = Recipe()
         self._state = State()
+
+        input_queue = queues.SimpleQueue()
+        self._update_queue = queues.SimpleQueue()
+        self._stdin_handler = StdinHandler(input_queue, self._process_input)
+        self._stdin_capture = StdinCapture(input_queue, self._update_queue)
 
         self._watch_inputs()
         signal.signal(signal.SIGINT, self._handle_SIGINT)
@@ -69,18 +134,18 @@ class KitchenHand(object):
                                self._handle_clipboard_content)
 
     def _watch_stdin(self):
-        gobject.io_add_watch(sys.stdin, gobject.IO_IN,
-                             self._handle_stdin_content)
+        self._stdin_handler.start()
+        self._stdin_capture.start()
 
     def _handle_clipboard_content(self, clipboard, event):
         selection = clipboard.wait_for_text()
         print selection    # provide feedback for the user
+        self._signal_update(selection)
         self._process_input(selection)
 
-    def _handle_stdin_content(self, stdin, condition):
-        value = stdin.readline()
-        self._process_input(value)
-        return True
+    def _signal_update(self, update):
+        self._update_queue.put(update)
+        kill(self._stdin_capture.pid, signal.SIGALRM)
 
     def _handle_SIGINT(self, signal, frame):
         logger.debug("caught SIGINT")
