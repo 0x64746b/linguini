@@ -1,22 +1,15 @@
 import gtk
-import gobject
 import sys
 import signal
 import logging
-from multiprocessing import Process, queues
-from os import fdopen, getpid, kill
-import readline
-from threading import Thread
+import os
 
 from data import Recipe, Ingredient
+import inputs
 from templates import Templates
 
 # module wide logger instance
 logger = logging.getLogger(__name__)
-
-
-class UpdateInterrupt(Exception):
-    pass
 
 
 class State(object):
@@ -53,45 +46,7 @@ class State(object):
         self.prompt()
 
 
-class StdinCapture(Process):
-
-    def __init__(self, parent_pid, input_queue, update_queue):
-        super(StdinCapture, self).__init__()
-
-        self._parent = parent_pid
-        self._input_queue = input_queue
-        self._update_queue = update_queue
-
-        signal.signal(signal.SIGALRM, self._handle_SIGALRM)
-        signal.signal(signal.SIGINT, self._handle_SIGINT)
-
-    def run(self):
-        sys.stdin = fdopen(0)
-        while True:
-            logger.debug('Capturing STDIN')
-            try:
-                value = raw_input()
-                logger.debug('Captured "%s" from STDIN', value)
-                self._input_queue.put(value)
-                kill(self._parent, signal.SIGALRM)
-            except UpdateInterrupt as update:
-                logger.debug('Updating history with "%s"', update)
-                readline.add_history(str(update))
-            except EOFError:
-                logger.debug('Received an EOF, terminating')
-                break
-
-    def _handle_SIGALRM(self, signal, frame):
-        update = self._update_queue.get()
-        raise UpdateInterrupt(update)
-
-    def _handle_SIGINT(self, signal, frame):
-        logger.debug('Quitting STDIN capture')
-        sys.exit(0)
-
-
 class KitchenHand(object):
-    SIGNAL_NEW_CLIPBOARD_CONTENT = 'owner-change'
 
     def __init__(self, output_file):
         self._output_file = output_file
@@ -99,44 +54,28 @@ class KitchenHand(object):
         self._recipe = Recipe()
         self._state = State()
 
-        self._watch_inputs()
-        self._handle_signals()
+        self._register_inputs()
+        self._register_signals()
 
         self._state.prompt()
 
-    def _watch_inputs(self):
-        self._watch_clipboard()
-        self._watch_stdin()
-
-    def _watch_clipboard(self):
-        self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_PRIMARY)
-        self.clipboard.connect(self.SIGNAL_NEW_CLIPBOARD_CONTENT,
-                               self._handle_clipboard_content)
-
-    def _watch_stdin(self):
-        self._input_queue = queues.SimpleQueue()
-        self._update_queue = queues.SimpleQueue()
-        self._stdin_capture = StdinCapture(getpid(), self._input_queue,
-                                           self._update_queue)
-        self._stdin_capture.start()
+    def _register_inputs(self):
+        inputs.watch_clipboard(self._handle_clipboard_content)
+        self._stdin_capture = inputs.watch_stdin()
 
     def _handle_clipboard_content(self, clipboard, event):
         selection = clipboard.wait_for_text()
         print selection    # provide feedback for the user
-        self._signal_update(selection)
+        self._stdin_capture.update_history(selection)
         self._process_input(selection)
 
-    def _signal_update(self, update):
-        self._update_queue.put(update)
-        kill(self._stdin_capture.pid, signal.SIGALRM)
-
-    def _handle_signals(self):
+    def _register_signals(self):
         signal.signal(signal.SIGALRM, self._handle_SIGALRM)
         signal.signal(signal.SIGINT, self._handle_SIGINT)
 
     def _handle_SIGALRM(self, signal, frame):
         logger.debug('Main process received a SIGALRM')
-        value = self._input_queue.get()
+        value = self._stdin_capture.get_input()
         self._process_input(value)
 
     def _handle_SIGINT(self, signal, frame):
