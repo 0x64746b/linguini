@@ -4,7 +4,7 @@ import sys
 import signal
 import logging
 from multiprocessing import Process, queues
-from os import fdopen, kill
+from os import fdopen, getpid, kill
 import readline
 from threading import Thread
 
@@ -55,9 +55,10 @@ class State(object):
 
 class StdinCapture(Process):
 
-    def __init__(self, input_queue, update_queue):
+    def __init__(self, parent_pid, input_queue, update_queue):
         super(StdinCapture, self).__init__()
 
+        self._parent = parent_pid
         self._input_queue = input_queue
         self._update_queue = update_queue
 
@@ -72,6 +73,7 @@ class StdinCapture(Process):
                 value = raw_input()
                 logger.debug('Captured "%s" from STDIN', value)
                 self._input_queue.put(value)
+                kill(self._parent, signal.SIGALRM)
             except UpdateInterrupt as update:
                 logger.debug('Updating history with "%s"', update)
                 readline.add_history(str(update))
@@ -88,31 +90,6 @@ class StdinCapture(Process):
         sys.exit(0)
 
 
-class StdinHandler(Thread):
-
-    def __init__(self, update_queue, callback):
-        super(StdinHandler, self).__init__()
-        self._process = callback
-
-        self._input_queue = queues.SimpleQueue()
-        self._stdin_capture = StdinCapture(self._input_queue, update_queue)
-        self._stdin_pid = 0
-
-        self.daemon = True
-
-    def run(self):
-        self._stdin_capture.start()
-        self._stdin_pid = self._stdin_capture.pid
-        while True:
-            logger.debug('Waiting for update from STDIN')
-            value = self._input_queue.get()
-            self._process(value)
-
-    @property
-    def pid(self):
-        return self._stdin_pid
-
-
 class KitchenHand(object):
     SIGNAL_NEW_CLIPBOARD_CONTENT = 'owner-change'
 
@@ -122,11 +99,8 @@ class KitchenHand(object):
         self._recipe = Recipe()
         self._state = State()
 
-        self._update_queue = queues.SimpleQueue()
-        self._stdin_handler = StdinHandler(self._update_queue, self._process_input)
-
         self._watch_inputs()
-        signal.signal(signal.SIGINT, self._handle_SIGINT)
+        self._handle_signals()
 
         self._state.prompt()
 
@@ -140,7 +114,11 @@ class KitchenHand(object):
                                self._handle_clipboard_content)
 
     def _watch_stdin(self):
-        self._stdin_handler.start()
+        self._input_queue = queues.SimpleQueue()
+        self._update_queue = queues.SimpleQueue()
+        self._stdin_capture = StdinCapture(getpid(), self._input_queue,
+                                           self._update_queue)
+        self._stdin_capture.start()
 
     def _handle_clipboard_content(self, clipboard, event):
         selection = clipboard.wait_for_text()
@@ -150,7 +128,16 @@ class KitchenHand(object):
 
     def _signal_update(self, update):
         self._update_queue.put(update)
-        kill(self._stdin_handler.pid, signal.SIGALRM)
+        kill(self._stdin_capture.pid, signal.SIGALRM)
+
+    def _handle_signals(self):
+        signal.signal(signal.SIGALRM, self._handle_SIGALRM)
+        signal.signal(signal.SIGINT, self._handle_SIGINT)
+
+    def _handle_SIGALRM(self, signal, frame):
+        logger.debug('Main process received a SIGALRM')
+        value = self._input_queue.get()
+        self._process_input(value)
 
     def _handle_SIGINT(self, signal, frame):
         logger.debug("caught SIGINT")
