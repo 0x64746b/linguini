@@ -1,10 +1,11 @@
 import gtk
-import gobject
 import sys
 import signal
 import logging
+import os
 
 from data import Recipe, Ingredient
+import inputs
 from templates import Templates
 
 # module wide logger instance
@@ -46,7 +47,6 @@ class State(object):
 
 
 class KitchenHand(object):
-    SIGNAL_NEW_CLIPBOARD_CONTENT = 'owner-change'
 
     def __init__(self, output_file):
         self._output_file = output_file
@@ -54,33 +54,29 @@ class KitchenHand(object):
         self._recipe = Recipe()
         self._state = State()
 
-        self._watch_inputs()
-        signal.signal(signal.SIGINT, self._handle_SIGINT)
+        self._register_inputs()
+        self._register_signals()
 
         self._state.prompt()
 
-    def _watch_inputs(self):
-        self._watch_clipboard()
-        self._watch_stdin()
-
-    def _watch_clipboard(self):
-        self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_PRIMARY)
-        self.clipboard.connect(self.SIGNAL_NEW_CLIPBOARD_CONTENT,
-                               self._handle_clipboard_content)
-
-    def _watch_stdin(self):
-        gobject.io_add_watch(sys.stdin, gobject.IO_IN,
-                             self._handle_stdin_content)
+    def _register_inputs(self):
+        inputs.watch_clipboard(self._handle_clipboard_content)
+        self._stdin_capture = inputs.watch_stdin()
 
     def _handle_clipboard_content(self, clipboard, event):
         selection = clipboard.wait_for_text()
         print selection    # provide feedback for the user
+        self._stdin_capture.update_history(selection)
         self._process_input(selection)
 
-    def _handle_stdin_content(self, stdin, condition):
-        value = stdin.readline()
+    def _register_signals(self):
+        signal.signal(signal.SIGALRM, self._handle_SIGALRM)
+        signal.signal(signal.SIGINT, self._handle_SIGINT)
+
+    def _handle_SIGALRM(self, signal, frame):
+        logger.debug('Main process received a SIGALRM')
+        value = self._stdin_capture.get_input()
         self._process_input(value)
-        return True
 
     def _handle_SIGINT(self, signal, frame):
         logger.debug("caught SIGINT")

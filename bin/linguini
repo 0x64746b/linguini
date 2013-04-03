@@ -32,6 +32,9 @@ def _setup_logging(target, level):
 
 if __name__ == '__main__':
 
+    gtk.threads_init()
+    gtk.set_interactive(False)
+
     cli_args = _parse_cli_args()
     _setup_logging(cli_args.log_file, cli_args.log_level)
 
