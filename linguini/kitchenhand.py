@@ -49,11 +49,11 @@ class State(object):
 
 class KitchenHand(object):
 
-    def __init__(self, output_file, create_snippet):
+    def __init__(self, output_file, image_name, create_snippet):
         self._output_file = output_file
         self._create_snippet = create_snippet
 
-        self._recipe = Recipe()
+        self._recipe = Recipe(image_name)
         self._state = State()
 
         self._register_inputs()

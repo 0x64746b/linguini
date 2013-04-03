@@ -42,11 +42,14 @@ class Templates(object):
 
     _recipe_format = r"""
 \begin{recipe}$header
+$image
 $ingredients
 \end{recipe}
 """
 
     _recipe_header_format = '{$title \creator{$creator}}{$num_dishes}{$prep_time}'
+
+    _image_format = r'    \freeform \hfill \fbox{\includegraphics[width=48mm]{$image}}'
 
     _ingredient_format = """    \ingredient[$amount]{$unit}{$description}
         $processing
@@ -66,6 +69,11 @@ $ingredients
     @classmethod
     def recipe_header(cls):
         return Template(cls._recipe_header_format)
+
+    @classproperty
+    @classmethod
+    def image(cls):
+        return Template(cls._image_format)
 
     @classproperty
     @classmethod

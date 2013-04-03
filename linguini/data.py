@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 
 class Recipe(object):
 
-    def __init__(self):
+    def __init__(self, image):
+        self._image_name = image
         self._ingredients = []
 
     @property
@@ -50,10 +51,12 @@ class Recipe(object):
     def render(self):
         logger.debug("Rendering recipe")
         header = self._render_header()
+        image = self._render_image()
         ingredients = self._render_ingredients()
 
         template = Templates.recipe
-        return template.substitute(header=header, ingredients=ingredients)
+        return template.substitute(header=header, image=image,
+                                   ingredients=ingredients)
 
     def _render_header(self):
         logger.debug("Rendering header")
@@ -62,6 +65,13 @@ class Recipe(object):
                                    creator=self._creator,
                                    num_dishes=self._num_dishes,
                                    prep_time=self._prep_time)
+
+    def _render_image(self):
+        image = ''
+        if self._image_name:
+            template = Templates.image
+            image = template.substitute(image=self._image_name)
+        return image
 
     def _render_ingredients(self):
         logger.debug("Rendering ingredients")
