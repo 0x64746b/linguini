@@ -16,6 +16,9 @@ help you set your recipes in LaTeX!"""
 
     parser.add_argument('output_file',
                         help="The .tex file to write your recipe to.")
+    parser.add_argument('-s', '--create-snippet', action='store_true',
+                        help="Create an \include{}able snippet instead of a"
+                             " complete LaTeX document")
     parser.add_argument('-L', '--log-file', metavar='file',
                         help="The file to log to (default: STDOUT).")
     parser.add_argument('-l', '--log-level', metavar='lvl', default='warning',
@@ -38,7 +41,7 @@ if __name__ == '__main__':
     cli_args = _parse_cli_args()
     _setup_logging(cli_args.log_file, cli_args.log_level)
 
-    hand = KitchenHand(cli_args.output_file)
+    hand = KitchenHand(cli_args.output_file, cli_args.create_snippet)
 
     try:
         gtk.main()

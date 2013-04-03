@@ -48,8 +48,9 @@ class State(object):
 
 class KitchenHand(object):
 
-    def __init__(self, output_file):
+    def __init__(self, output_file, create_snippet):
         self._output_file = output_file
+        self._create_snippet = create_snippet
 
         self._recipe = Recipe()
         self._state = State()
@@ -135,8 +136,10 @@ class KitchenHand(object):
 
     def _render(self):
         logger.debug("Rendering document")
-        recipe = self._recipe.render()
-        return Templates.document.substitute(recipe=recipe)
+        document = self._recipe.render()
+        if not self._create_snippet:
+            document = Templates.document.substitute(recipe=document)
+        return document
 
     def _write(self, latex):
         logger.debug("Writing to file")
