@@ -22,7 +22,8 @@ help you set your recipes in LaTeX!"""
     parser.add_argument('-L', '--log-file', metavar='file',
                         help="The file to log to (default: STDOUT).")
     parser.add_argument('-l', '--log-level', metavar='lvl', default='warning',
-                        choices=['debug', 'info', 'warning', 'error', 'critical'],
+                        choices=['debug', 'info', 'warning',
+                                 'error', 'critical'],
                         help="The lowest level to log (default: %(default)s)")
 
     return parser.parse_args()

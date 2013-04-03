@@ -5,8 +5,7 @@ from utils import classproperty
 
 class Templates(object):
 
-    _document_format = \
-r"""
+    _document_format = r"""
 \documentclass[a4paper,10pt]{article}
 
 \usepackage{ngerman}
@@ -41,9 +40,8 @@ r"""
 \end{document}
 """
 
-    _recipe_format = \
-"""
-\\begin{recipe}$header
+    _recipe_format = r"""
+\begin{recipe}$header
 $ingredients
 \end{recipe}
 """

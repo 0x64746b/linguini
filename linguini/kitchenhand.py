@@ -2,7 +2,6 @@ import gtk
 import sys
 import signal
 import logging
-import os
 
 from data import Recipe, Ingredient
 import inputs
@@ -17,15 +16,17 @@ class State(object):
      INGREDIENT, AMOUNT, UNIT, PROCESSING,
      DONE) = range(10)
 
-    _prompts = { TITLE: "What is the title of the recipe?",
-                 CREATOR: "Who created this recipe?",
-                 NUM_DISHES: "How many dishes does this recipe serve?",
-                 PREP_TIME: "How long does it take to prepare and cook this recipe?",
-                 INGREDIENTS: "Please enter an ingredient:",
-                 INGREDIENT: "Which ingredient do you want to add? (Ctrl+C to abort)",
-                 AMOUNT: "How much do you want to add of this ingredient?",
-                 UNIT: "What is the unit of this ingredient?",
-                 PROCESSING: "What should be done with the ingredients?", }
+    _prompts = {TITLE: "What is the title of the recipe?",
+                CREATOR: "Who created this recipe?",
+                NUM_DISHES: "How many dishes does this recipe serve?",
+                PREP_TIME: "How long does it take to prepare and"
+                           " cook this recipe?",
+                INGREDIENTS: "Please enter an ingredient:",
+                INGREDIENT: "Which ingredient do you want to add?"
+                            " (Ctrl+C to abort)",
+                AMOUNT: "How much do you want to add of this ingredient?",
+                UNIT: "What is the unit of this ingredient?",
+                PROCESSING: "What should be done with the ingredients?", }
 
     def __init__(self):
         self._current = State.TITLE
@@ -94,7 +95,8 @@ class KitchenHand(object):
             gtk.main_quit()
 
     def _process_input(self, value):
-        if value: value = value.strip()
+        if value:
+            value = value.strip()
         logger.debug("processing input '{}' in state {}".format(
             value, self._state.current))
 
@@ -150,4 +152,3 @@ class KitchenHand(object):
     def _exit(self):
         print "We're done!"
         sys.exit()
-

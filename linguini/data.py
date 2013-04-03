@@ -13,28 +13,32 @@ class Recipe(object):
         self._ingredients = []
 
     @property
-    def title(self): pass
+    def title(self):
+        pass
 
     @title.setter
     def title(self, title):
         self._title = title
 
     @property
-    def creator(self): pass
+    def creator(self):
+        pass
 
     @creator.setter
     def creator(self, creator):
         self._creator = creator
 
     @property
-    def num_dishes(self): pass
+    def num_dishes(self):
+        pass
 
     @num_dishes.setter
     def num_dishes(self, num_dishes):
         self._num_dishes = num_dishes
 
     @property
-    def prep_time(self): pass
+    def prep_time(self):
+        pass
 
     @prep_time.setter
     def prep_time(self, prep_time):
@@ -70,28 +74,32 @@ class Recipe(object):
 class Ingredient(object):
 
     @property
-    def amount(self): pass
+    def amount(self):
+        pass
 
     @amount.setter
     def amount(self, amount):
         self._amount = amount
 
     @property
-    def unit(self): pass
+    def unit(self):
+        pass
 
     @unit.setter
     def unit(self, unit):
         self._unit = unit
 
     @property
-    def description(self): pass
+    def description(self):
+        pass
 
     @description.setter
     def description(self, description):
         self._description = description
 
     @property
-    def processing(self): pass
+    def processing(self):
+        pass
 
     @processing.setter
     def processing(self, processing):
